@@ -15,12 +15,13 @@
 
 package main
 
-// NOTE: to compile this, you need gtk 2.0 and >=go-1.3.1
+// NOTE: to compile this, you need gtk 3.0 and >=go-1.27
 
 import (
 	"errors"
 	"flag"
 	"fmt"
+
 	"github.com/duncte123/sharenix/sharenixlib"
 )
 

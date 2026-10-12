@@ -1,3 +1,6 @@
+//go:build !cgocheck
+// +build !cgocheck
+
 /*
    Copyright 2014 Franc[e]sco (lolisamurai@tfwno.gf)
    This file is part of sharenix.
@@ -13,24 +16,25 @@
    along with sharenix. If not, see <http://www.gnu.org/licenses/>.
 */
 
-// +build !cgocheck
-
 package sharenixlib
 
-// #cgo pkg-config: gtk+-2.0
+// #cgo pkg-config: gtk+-3.0
 // #include "clipboard.go.h"
 import "C"
 
 import (
-	"github.com/mattn/go-gtk/gdk"
-	"github.com/mattn/go-gtk/gtk"
 	"unsafe"
+
+	"github.com/gotk3/gotk3/gdk"
+	"github.com/gotk3/gotk3/gtk"
 )
 
 // GetClipboard returns the default display's GTK clipboard
 func GetClipboard() *gtk.Clipboard {
-	display := gdk.DisplayGetDefault()
-	return gtk.NewClipboardGetForDisplay(display, gdk.SELECTION_CLIPBOARD)
+	display, _ := gdk.DisplayGetDefault()
+	clipBoard, _ := gtk.ClipboardGetForDisplay(display, gdk.SELECTION_CLIPBOARD)
+
+	return clipBoard
 }
 
 // SetClipbboardText sets the clipboard text contents and calls
@@ -39,11 +43,11 @@ func GetClipboard() *gtk.Clipboard {
 // and it is not guaranteed to persist on all window managers once the program
 // terminates.
 func SetClipboardText(text string) {
-	display := gdk.DisplayGetDefault()
-	pri := gtk.NewClipboardGetForDisplay(display, gdk.SELECTION_PRIMARY)
+	display, _ := gdk.DisplayGetDefault()
+	pri, _ := gtk.ClipboardGetForDisplay(display, gdk.SELECTION_PRIMARY)
 
 	for _, cli := range []*gtk.Clipboard{pri, GetClipboard()} {
-		C._gtk_clipboard_set_can_store(unsafe.Pointer(cli.GClipboard))
+		C._gtk_clipboard_set_can_store(unsafe.Pointer(cli.GObject))
 		cli.SetText(text)
 		gtk.MainIterationDo(true)
 		cli.Store()

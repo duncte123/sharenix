@@ -17,15 +17,15 @@ package sharenixlib
 
 import (
 	"fmt"
-	"github.com/BurntSushi/xgb"
-	"github.com/mattn/go-gtk/gdk"
-	"github.com/mattn/go-gtk/glib"
-	"github.com/mattn/go-gtk/gtk"
-	"github.com/mattn/go-gtk/pango"
 	"os"
 	"path"
 	"time"
-	"unsafe"
+
+	"github.com/BurntSushi/xgb"
+	"github.com/gotk3/gotk3/gdk"
+	"github.com/gotk3/gotk3/glib"
+	"github.com/gotk3/gotk3/gtk"
+	"github.com/gotk3/gotk3/pango"
 )
 
 func lockName(index int) string {
@@ -82,7 +82,7 @@ func lockEnd(index int) (err error) {
 func Notifyf(head uint32, expire time.Duration, onInit func(*gtk.Window),
 	format string, a ...interface{}) (err error) {
 
-	win := gtk.NewWindow(gtk.WINDOW_POPUP)
+	win, _ := gtk.WindowNew(gtk.WINDOW_POPUP)
 	win.SetTitle(ShareNixVersion)
 	win.SetDecorated(false)
 	win.SetKeepAbove(true)
@@ -91,21 +91,22 @@ func Notifyf(head uint32, expire time.Duration, onInit func(*gtk.Window),
 	lockIndex := 0
 
 	// Handle left/right click
-	win.Connect("button-press-event", func(ctx *glib.CallbackContext) {
+	win.Connect("button-press-event", func(_ *gtk.Button, event *gdk.Event) bool {
 		DebugPrintln("button-press-event")
 
-		arg := ctx.Args(0)
-		e := *(**gdk.EventButton)(unsafe.Pointer(&arg))
+		e := gdk.EventButtonNewFromEvent(event)
 
-		DebugPrintln("button =", e.Button)
-		switch e.Button {
+		DebugPrintln("button =", e.Button())
+		switch e.Button() {
 		case 3: // right click (single)
 			lockEnd(lockIndex)
 			os.Exit(0)
 		}
+
+		return false
 	})
 
-	l := gtk.NewLabel("")
+	l, _ := gtk.LabelNew("")
 
 	// PANGO_ELLIPSIZE_END automatically limits the text length when the
 	// window is resized and appends ... at the end
@@ -113,8 +114,8 @@ func Notifyf(head uint32, expire time.Duration, onInit func(*gtk.Window),
 	l.SetSingleLineMode(true)
 	l.SetMaxWidthChars(60) // workaround for a positioning bug, see below
 	l.SetEllipsize(pango.ELLIPSIZE_END)
-	l.Misc.SetAlignment(0.5, 0.5)
-	l.SetPadding(10, 10)
+	//l.Misc.SetAlignment(0.5, 0.5)
+	//l.SetPadding(10, 10)
 	l.SetMarkup(notiftext)
 	win.Add(l)
 	win.ShowAll() // parent window will adjust to the size of the label here

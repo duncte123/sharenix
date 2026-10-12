@@ -15,7 +15,7 @@
 
 // Package sharenixlib contains the core functionalities of sharenix
 // it can be used to implement custom front-ends for sharenix.
-// NOTE: to compile this, you need gtk 2.0 and >=go-1.3.1
+// NOTE: to compile this, you need gtk 3.0 and >=go-1.27
 package sharenixlib
 
 import (
@@ -23,24 +23,24 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/BurntSushi/xgb"
-	"github.com/mattn/go-gtk/gdk"
-	"github.com/mattn/go-gtk/glib"
-	"github.com/mattn/go-gtk/gtk"
 	"html"
 	"image/png"
 	"io"
-	"mvdan.cc/xurls/v2"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"time"
 	"unsafe"
+
+	"github.com/BurntSushi/xgb"
+	"github.com/gotk3/gotk3/gdk"
+	"github.com/gotk3/gotk3/glib"
+	"github.com/gotk3/gotk3/gtk"
+	"mvdan.cc/xurls/v2"
 )
 
 const (
@@ -411,22 +411,16 @@ func UploadClipboard(cfg *Config, sitecfg *SiteConfig, silent, notif,
 
 	// URI list (copied files)
 	DebugPrintln("Looking for URI list...")
-	selectiondata := clipboard.WaitForContents(
-		gdk.AtomIntern("x-special/gnome-copied-files", false))
+	selectiondata, _ := clipboard.WaitForContents(
+		gdk.GdkAtomIntern("x-special/gnome-copied-files", false))
 
 	// NOTE: this is supposed to be freed, but we're just not gonna care for now
 	//       because we only call this once anyways
 
-	ptr := selectiondata.GetData()
+	dataBytes := selectiondata.GetData()
 
-	if uintptr(ptr) != 0 {
-		var bytes []byte
-		hdr := (*reflect.SliceHeader)(unsafe.Pointer(&bytes))
-		hdr.Data = uintptr(ptr)
-		hdr.Len = selectiondata.GetLength()
-		hdr.Cap = hdr.Len
-
-		selectionstr := string(bytes)
+	if len(dataBytes) != 0 {
+		selectionstr := string(dataBytes)
 		DebugPrintln(selectionstr)
 
 		// upload first copied file with UploadFile
@@ -453,7 +447,7 @@ func UploadClipboard(cfg *Config, sitecfg *SiteConfig, silent, notif,
 
 	// Plain text (shorten url or upload as text file)
 	DebugPrintln("Looking for plain text...")
-	selectionstr := clipboard.WaitForText()
+	selectionstr, _ := clipboard.WaitForText()
 	if len(selectionstr) > 0 {
 		DebugPrintln(selectionstr)
 
@@ -493,8 +487,8 @@ func UploadClipboard(cfg *Config, sitecfg *SiteConfig, silent, notif,
 
 	// Raw image (copied from an image editor or from the browser)
 	DebugPrintln("Looking for copied raw images...")
-	pixbuf := clipboard.WaitForImage()
-	if uintptr(unsafe.Pointer(pixbuf.GPixbuf)) != 0 {
+	pixbuf, _ := clipboard.WaitForImage()
+	if uintptr(unsafe.Pointer(pixbuf.GObject)) != 0 {
 		DebugPrintln("Colorspace:", int(pixbuf.GetColorspace()),
 			"Channels:", pixbuf.GetNChannels(),
 			"Has Alpha:", pixbuf.GetHasAlpha(),
@@ -514,7 +508,7 @@ func UploadClipboard(cfg *Config, sitecfg *SiteConfig, silent, notif,
 
 		// let gtk save it as a proper png so we don't have to
 		// figure out what type of image we are dealing with
-		pixbuf.Save(afilepath, "png")
+		pixbuf.SavePNG(afilepath, 4)
 		// TODO: for some reason this always returns an err which
 		// prints as nil so we can't error check here :(
 
@@ -532,22 +526,26 @@ func UploadClipboard(cfg *Config, sitecfg *SiteConfig, silent, notif,
 }
 
 /*
-	ShareNix uploads a file with the given options
-	cfg: ShareNix config
-	mode:
-		f/file: upload file
-		fs/fullscreen: screenshot entire screen and upload
-		s/section: select screen region and upload
-		c/clipboard: upload clipboard contents
-		r/record: record screen region and upload
-		u/url: shorten url
-	site: name of the target site
-	silent: disables all console output except errors if enabled
-	notification: displays a gtk notification if enabled. note that dimissing
-	              this notification will force quit the process and the function
-	              will never return.
-	open: automatically opens the uploaded file in the default browser
-	copyurl: stores the url in the clipboard after uploading
+ShareNix uploads a file with the given options
+cfg: ShareNix config
+mode:
+
+	f/file: upload file
+	fs/fullscreen: screenshot entire screen and upload
+	s/section: select screen region and upload
+	c/clipboard: upload clipboard contents
+	r/record: record screen region and upload
+	u/url: shorten url
+
+site: name of the target site
+silent: disables all console output except errors if enabled
+notification: displays a gtk notification if enabled. note that dimissing
+
+	this notification will force quit the process and the function
+	will never return.
+
+open: automatically opens the uploaded file in the default browser
+copyurl: stores the url in the clipboard after uploading
 */
 func ShareNix(cfg *Config, mode, site string, silent,
 	notification, open, copyurl, upload bool) (
