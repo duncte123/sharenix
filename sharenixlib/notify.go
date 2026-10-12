@@ -114,6 +114,8 @@ func Notifyf(head uint32, expire time.Duration, onInit func(*gtk.Window),
 	l.SetSingleLineMode(true)
 	l.SetMaxWidthChars(60) // workaround for a positioning bug, see below
 	l.SetEllipsize(pango.ELLIPSIZE_END)
+	l.SetHAlign(gtk.ALIGN_CENTER)
+	l.SetVAlign(gtk.ALIGN_CENTER)
 	//l.Misc.SetAlignment(0.5, 0.5)
 	//l.SetPadding(10, 10)
 	l.SetMarkup(notiftext)
