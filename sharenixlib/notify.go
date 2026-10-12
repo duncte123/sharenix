@@ -80,7 +80,7 @@ func lockEnd(index int) (err error) {
 // onInit is a goroutine that will be started before the gtk main loop
 // blocks the main thread. It takes the notification window as a parameter.
 func Notifyf(head uint32, expire time.Duration, onInit func(*gtk.Window),
-	format string, a ...interface{}) (err error) {
+	format string, a ...any) (err error) {
 
 	win, _ := gtk.WindowNew(gtk.WINDOW_POPUP)
 	win.SetTitle(ShareNixVersion)
@@ -91,7 +91,7 @@ func Notifyf(head uint32, expire time.Duration, onInit func(*gtk.Window),
 	lockIndex := 0
 
 	// Handle left/right click
-	win.Connect("button-press-event", func(_ *gtk.Button, event *gdk.Event) bool {
+	win.Connect("button-press-event", func(_ *gtk.Window, event *gdk.Event) bool {
 		DebugPrintln("button-press-event")
 
 		e := gdk.EventButtonNewFromEvent(event)
